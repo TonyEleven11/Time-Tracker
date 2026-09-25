@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Time">
+<meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Time Tracker</title>
+<style>
+:root{
+  --bg:#f5f3ee; --card:#ffffff; --ink:#1d1c1a; --mute:#79756c; --line:#e7e3da;
+  --acc:#1f6f63; --onacc:#ffffff; --danger:#c0392b; --warn:#fff1cf; --warnink:#6b4a00;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121211; --card:#1e1d1b; --ink:#f2efe8; --mute:#9a958a; --line:#2e2c29;
+    --acc:#5fc0ae; --onacc:#0c1f1b; --danger:#ff6b5b; --warn:#3a2f10; --warnink:#f1d590;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{
+  font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+  -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%;
+  padding-top:env(safe-area-inset-top);
+}
+body.lock{overflow:hidden}
+button{font-family:inherit}
+#app{max-width:520px;margin:0 auto;padding:6px 16px calc(92px + env(safe-area-inset-bottom))}
+
+.top{display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px}
+.top h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.02em}
+.gear{all:unset;cursor:pointer;width:42px;height:42px;display:grid;place-items:center;border-radius:50%;color:var(--mute)}
+.gear:active{background:var(--line)}
+.gear svg{width:24px;height:24px}
+
+/* running card */
+.now{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--c);color:#fff;border-radius:24px;padding:16px 18px;margin-bottom:14px}
+.now-l{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;display:flex;align-items:center;gap:7px}
+.now-l i{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s ease-in-out infinite}
+.now-n{font-size:22px;font-weight:800;margin-top:2px;line-height:1.15}
+.clock{font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:2px}
+.stop{all:unset;cursor:pointer;flex:none;width:86px;height:86px;border-radius:50%;background:#fff;color:#1d1c1a;font-weight:800;font-size:16px;display:grid;place-items:center;text-align:center}
+.stop:active{transform:scale(.95)}
+.stop span{display:block}
+.stop b{display:block;width:20px;height:20px;border-radius:5px;background:#1d1c1a;margin:0 auto 4px}
+
+.idle{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:16px 18px;margin-bottom:14px}
+.idle-l{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.idle-v{font-size:34px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+.idle-s{color:var(--mute);font-size:14px;margin-top:2px}
+
+.stale{background:var(--warn);color:var(--warnink);border-radius:16px;padding:12px 14px;margin:-2px 0 14px;font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stale button{all:unset;cursor:pointer;font-weight:700;text-decoration:underline;white-space:nowrap}
+
+/* tiles */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{position:relative;background:var(--c);border-radius:22px;color:#fff;min-height:112px}
+.tile.on{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--c)}
+.tile-main{all:unset;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;width:100%;height:100%;min-height:112px;padding:14px;cursor:pointer;border-radius:22px}
+.tile-main:active{transform:scale(.97);transition:transform .08s}
+.tn{font-weight:750;font-size:18px;line-height:1.15;overflow-wrap:break-word}
+.tt{font-size:13px;opacity:.9;display:flex;align-items:center;gap:6px;min-height:30px;padding-right:56px}
+.tt i{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s ease-in-out infinite;flex:none}
+.tile-log{position:absolute;right:10px;bottom:10px;z-index:2;border:0;border-radius:999px;background:rgba(255,255,255,.24);color:#fff;font-weight:700;font-size:13px;padding:7px 11px;min-height:32px;cursor:pointer}
+.tile-log:active{background:rgba(255,255,255,.4)}
+.tile.add{background:transparent;border:2px dashed var(--line);color:var(--mute)}
+.tile.add .tile-main{align-items:center;justify-content:center;font-weight:700}
+@keyframes pulse{50%{opacity:.25}}
+
+/* bars */
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px 18px;margin-bottom:14px}
+.big{font-size:34px;font-weight:800;letter-spacing:-.02em}
+.lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.brow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin-top:14px}
+.bl{display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
+.bl i,.sub i{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.bv{font-variant-numeric:tabular-nums;font-weight:700}
+.bt{grid-column:1/-1;height:8px;background:var(--line);border-radius:6px;overflow:hidden}
+.bt b{display:block;height:100%;border-radius:6px}
+.empty{color:var(--mute);text-align:center;padding:22px 8px}
+
+.nav-d{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.nav-d .t{font-size:18px;font-weight:750}
+.arrow{all:unset;cursor:pointer;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:26px;color:var(--ink)}
+.arrow:active{background:var(--line)}
+.arrow[disabled]{opacity:.25;pointer-events:none}
+
+.srow{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.srow:first-of-type{border-top:0}
+.srow .l{display:flex;align-items:center;gap:10px;min-width:0}
+.srow .l i{width:10px;height:10px;border-radius:50%;flex:none}
+.srow .n{font-weight:650}
+.srow .tm{color:var(--mute);font-size:13px}
+.srow .d{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* week chart */
+.chart{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end}
+.col{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px}
+.ct{font-size:11px;color:var(--mute);min-height:14px;font-variant-numeric:tabular-nums}
+.stack{width:100%;height:130px;display:flex;flex-direction:column-reverse;background:var(--line);border-radius:10px;overflow:hidden}
+.stack span{display:block;min-height:2px}
+.cl{font-size:12px;font-weight:700;color:var(--mute)}
+.cl.today{color:var(--acc)}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.nav div{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.nav button{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;font-size:12px;font-weight:650;color:var(--mute)}
+.nav button svg{width:26px;height:26px}
+.nav button.on{color:var(--acc)}
+
+/* sheet */
+.sheet-root{position:fixed;inset:0;z-index:50}
+.sheet-root[hidden]{display:none}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.42)}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--card);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto;animation:up .18s ease-out;box-shadow:0 -10px 40px rgba(0,0,0,.2)}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet h2{margin:0 40px 6px 0;font-size:22px;letter-spacing:-.01em}
+.sheet .sub{color:var(--mute);margin:0 0 14px;display:flex;align-items:center;gap:8px;font-size:15px}
+.x{all:unset;cursor:pointer;position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--mute);font-size:20px}
+.x:active{background:var(--line)}
+.fld{display:block;margin:12px 0}
+.fld span{display:block;font-size:13px;color:var(--mute);margin-bottom:5px}
+.fld input,.fld select{width:100%;font:inherit;font-size:17px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:13px 14px;appearance:none;-webkit-appearance:none;min-height:50px}
+.fld input:focus,.fld select:focus{outline:2px solid var(--acc);outline-offset:1px}
+#lm{font-size:30px;font-weight:700;text-align:center;-moz-appearance:textfield}
+#lm::-webkit-inner-spin-button,#lm::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.err{color:var(--danger);font-size:14px;min-height:20px;margin:4px 0}
+.btns{display:flex;gap:10px;margin-top:8px}
+.btn{all:unset;cursor:pointer;flex:1;text-align:center;padding:15px 12px;border-radius:16px;font-weight:750;font-size:17px;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.pri{background:var(--acc);color:var(--onacc);border-color:transparent}
+.btn.danger{color:var(--danger)}
+.btn:active{opacity:.75}
+.sw{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 10px}
+.sw button{all:unset;cursor:pointer;width:38px;height:38px;border-radius:50%;background:var(--c);display:grid;place-items:center;color:#fff;font-weight:800}
+.sw button.sel{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--c)}
+.sec{margin:18px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.foot{color:var(--mute);font-size:12px;margin-top:16px;text-align:center}
+</style>
+</head>
+<body>
+<div id="app"><div id="view"></div></div>
+
+<nav class="nav"><div>
+  <button data-a="tab" data-tab="track"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 3h5"/></svg>Track</button>
+  <button data-a="tab" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg>Today</button>
+  <button data-a="tab" data-tab="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V11M12 20V5M18 20v-6"/></svg>Week</button>
+</div></nav>
+
+<div class="sheet-root" id="sheet" hidden>
+  <div class="scrim" data-a="close"></div>
+  <div class="sheet"><button class="x" data-a="close" aria-label="Close">&#10005;</button><div id="sheetBody"></div></div>
+</div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script>
+(() => {
+'use strict';
+const VERSION = 'v1';
+const KEY = 'timetracker.v1';
+const COLORS = ['#c4551f','#3f5fe0','#2f7d3e','#c13567','#7a4bc4','#23786e','#9a6b00','#566579'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const p2 = n => String(n).padStart(2, '0');
+
+/* ---------- data ---------- */
+function seed() {
+  const names = ['Work Appt','Marketing','Gym','Family','Netflix/YouTube','Study'];
+  return { activities: names.map((n, i) => ({ id: uid() + i, name: n, color: COLORS[i] })), sessions: [], running: null };
+}
+function load() {
+  try {
+    const j = JSON.parse(localStorage.getItem(KEY));
+    if (j && Array.isArray(j.activities) && Array.isArray(j.sessions)) return j;
+  } catch (e) {}
+  return seed();
+}
+let S = load();
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+save(); // persist the starter activities straight away so their ids stay stable
+
+let tab = 'track', curDay = Date.now(), curWeek = Date.now();
+let pickedColor = COLORS[0], fromSettings = false, confirmCb = null;
+
+/* ---------- time helpers ---------- */
+const sod = ts => { const d = new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
+const addDays = (ts, n) => { const d = new Date(ts); d.setDate(d.getDate() + n); return d.getTime(); };
+const weekStart = ts => { const d = new Date(sod(ts)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+function fmtDur(ms) {
+  if (ms <= 0) return '0m';
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return '<1m';
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+}
+function fmtShort(ms) {
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return mins + 'm';
+  return (ms / 3600000).toFixed(1).replace(/\.0$/, '') + 'h';
+}
+function fmtClock(ms) {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  return `${p2(Math.floor(t / 3600))}:${p2(Math.floor(t % 3600 / 60))}:${p2(t % 60)}`;
+}
+const fmtTime = ts => new Date(ts).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
+const fmtDate = ts => new Date(ts).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+function toLocal(ts) { const d = new Date(ts); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+const fromLocal = s => new Date(s).getTime();
+function dayLabel(ts) {
+  const d = sod(ts), t = sod(Date.now());
+  if (d === t) return 'Today';
+  if (d === addDays(t, -1)) return 'Yesterday';
+  return fmtDate(ts);
+}
+
+/* ---------- queries ---------- */
+const act = id => S.activities.find(a => a.id === id) || { id, name: 'Deleted', color: '#888888' };
+const live = () => S.activities.filter(a => !a.archived);
+function all() {
+  const a = S.sessions.slice();
+  if (S.running) a.push({ id: 'run', act: S.running.act, start: S.running.start, end: Date.now(), running: true });
+  return a;
+}
+function totals(a, b) {
+  const m = {};
+  for (const s of all()) {
+    const o = Math.min(s.end, b) - Math.max(s.start, a);
+    if (o > 0) m[s.act] = (m[s.act] || 0) + o;
+  }
+  return m;
+}
+const sum = m => Object.values(m).reduce((x, y) => x + y, 0);
+
+/* ---------- actions ---------- */
+function stopRunning(end) {
+  const r = S.running; if (!r) return;
+  end = end || Date.now();
+  if (end - r.start >= 3000) S.sessions.push({ id: uid(), act: r.act, start: r.start, end });
+  S.running = null; save();
+}
+function startAct(id) {
+  const now = Date.now();
+  if (S.running) stopRunning(now);
+  S.running = { act: id, start: now }; save();
+}
+
+/* ---------- views ---------- */
+const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+const head = title => `<header class="top"><h1>${title}</h1><button class="gear" data-a="settings" aria-label="Settings">${GEAR}</button></header>`;
+
+function viewTrack() {
+  const now = Date.now(), t0 = sod(now);
+  const tod = totals(t0, addDays(t0, 1));
+  let top = '';
+  if (S.running) {
+    const a = act(S.running.act);
+    top = `<div class="now" style="--c:${a.color}"><div><div class="now-l"><i></i>Now tracking</div><div class="now-n">${esc(a.name)}</div><div class="clock" id="clock">${fmtClock(now - S.running.start)}</div></div><button class="stop" data-a="stop" aria-label="Stop"><span><b></b>Stop</span></button></div>`;
+    if (now - S.running.start > 3 * 3600000) {
+      top += `<div class="stale"><span>Started ${fmtTime(S.running.start)} &mdash; forgot to stop?</span><button data-a="stopat">Set end time</button></div>`;
+    }
+  } else {
+    const total = sum(tod);
+    top = `<div class="idle"><div class="idle-l">Tracked today</div><div class="idle-v">${fmtDur(total)}</div><div class="idle-s">Tap an activity to start</div></div>`;
+  }
+  const tiles = live().map(a => {
+    const run = S.running && S.running.act === a.id;
+    const td = tod[a.id] || 0;
+    const sub = run ? `<i></i>Running` : (td ? `${fmtDur(td)} today` : 'Tap to start');
+    return `<div class="tile${run ? ' on' : ''}" style="--c:${a.color}"><button class="tile-main" data-a="tile" data-id="${a.id}"><span class="tn">${esc(a.name).replace(/\//g, '/<wbr>')}</span><span class="tt">${sub}</span></button><button class="tile-log" data-a="log" data-id="${a.id}" aria-label="Log time for ${esc(a.name)}">+ log</button></div>`;
+  }).join('');
+  const add = `<div class="tile add"><button class="tile-main" data-a="addact">+ Add activity</button></div>`;
+  return head('Track') + top + `<div class="grid">${tiles}${add}</div>`;
+}
+
+function barRows(m) {
+  const ids = Object.keys(m).sort((a, b) => m[b] - m[a]);
+  if (!ids.length) return '';
+  const max = m[ids[0]];
+  return ids.map(id => {
+    const a = act(id);
+    return `<div class="brow"><div class="bl"><i style="background:${a.color}"></i><span>${esc(a.name)}</span></div><div class="bv">${fmtDur(m[id])}</div><div class="bt"><b style="width:${Math.max(2, m[id] / max * 100)}%;background:${a.color}"></b></div></div>`;
+  }).join('');
+}
+
+function viewToday() {
+  const d0 = sod(curDay), d1 = addDays(d0, 1);
+  const isToday = d0 === sod(Date.now());
+  const m = totals(d0, d1), total = sum(m);
+  const sess = all().filter(s => Math.min(s.end, d1) - Math.max(s.start, d0) > 0).sort((a, b) => b.start - a.start);
+  const rows = sess.map(s => {
+    const a = act(s.act), dur = Math.min(s.end, d1) - Math.max(s.start, d0);
+    const time = s.running ? `${fmtTime(s.start)} &ndash; now` : `${fmtTime(s.start)} &ndash; ${fmtTime(s.end)}`;
+    const inner = `<span class="l"><i style="background:${a.color}"></i><span><span class="n">${esc(a.name)}</span><br><span class="tm">${time}</span></span></span><span class="d">${fmtDur(dur)}</span>`;
+    return s.running ? `<div class="srow" style="cursor:default">${inner}</div>` : `<button class="srow" data-a="edit" data-id="${s.id}">${inner}</button>`;
+  }).join('');
+  return head('Today') +
+    `<div class="nav-d"><button class="arrow" data-a="prevday" aria-label="Previous day">&#8249;</button><div class="t">${dayLabel(d0)}</div><button class="arrow" data-a="nextday" aria-label="Next day" ${isToday ? 'disabled' : ''}>&#8250;</button></div>` +
+    `<div class="card"><div class="lbl">Total tracked</div><div class="big">${fmtDur(total)}</div>${barRows(m)}${total ? '' : '<div class="empty">Nothing tracked yet</div>'}</div>` +
+    (rows ? `<div class="card"><div class="lbl" style="margin-bottom:4px">Sessions &middot; tap to edit</div>${rows}</div>` : '');
+}
+
+function viewWeek() {
+  const w0 = weekStart(curWeek), w1 = addDays(w0, 7);
+  const isThis = w0 === weekStart(Date.now());
+  const days = [...Array(7)].map((_, i) => addDays(w0, i));
+  const perDay = days.map(d => totals(d, addDays(d, 1)));
+  const maxDay = Math.max(3600000, ...perDay.map(sum));
+  const order = S.activities.map(a => a.id);
+  const letters = ['M','T','W','T','F','S','S'];
+  const todayTs = sod(Date.now());
+  const cols = days.map((d, i) => {
+    const tot = sum(perDay[i]);
+    const segs = Object.keys(perDay[i]).sort((a, b) => order.indexOf(a) - order.indexOf(b))
+      .map(id => `<span style="height:${perDay[i][id] / maxDay * 100}%;background:${act(id).color}"></span>`).join('');
+    return `<button class="col" data-a="goday" data-ts="${d}" aria-label="${fmtDate(d)}"><span class="ct">${tot ? fmtShort(tot) : ''}</span><div class="stack">${segs}</div><span class="cl${d === todayTs ? ' today' : ''}">${letters[i]}</span></button>`;
+  }).join('');
+  const m = totals(w0, w1), total = sum(m);
+  const dEnd = addDays(w0, 6);
+  const label = isThis ? 'This week' : `${new Date(w0).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} &ndash; ${new Date(dEnd).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`;
+  return head('Week') +
+    `<div class="nav-d"><button class="arrow" data-a="prevweek" aria-label="Previous week">&#8249;</button><div class="t">${label}</div><button class="arrow" data-a="nextweek" aria-label="Next week" ${isThis ? 'disabled' : ''}>&#8250;</button></div>` +
+    `<div class="card"><div class="chart">${cols}</div></div>` +
+    `<div class="card"><div class="lbl">Total tracked</div><div class="big">${fmtDur(total)}</div>${barRows(m)}${total ? '' : '<div class="empty">Nothing tracked this week</div>'}</div>`;
+}
+
+function render() {
+  $('#view').innerHTML = tab === 'track' ? viewTrack() : tab === 'today' ? viewToday() : viewWeek();
+  document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html) {
+  $('#sheetBody').innerHTML = html;
+  $('#sheet').hidden = false;
+  document.body.classList.add('lock');
+  const f = $('#sheetBody [autofocus]'); if (f) f.focus();
+}
+function closeSheet() {
+  $('#sheet').hidden = true; $('#sheetBody').innerHTML = '';
+  document.body.classList.remove('lock');
+  render();
+}
+const setErr = m => { const e = $('#err'); if (e) e.textContent = m; };
+
+function sheetLog(id) {
+  const a = act(id);
+  openSheet(`<h2>Log time</h2><p class="sub"><i style="background:${a.color}"></i>${esc(a.name)} &middot; time already spent, ending now</p>
+  <label class="fld"><span>Minutes</span><input id="lm" type="number" inputmode="numeric" pattern="[0-9]*" min="1" max="1440" placeholder="e.g. 45" autofocus></label>
+  <div class="err" id="err"></div>
+  <div class="btns"><button class="btn pri" data-a="dolog" data-id="${id}">Done</button></div>`);
+}
+function doLog(id) {
+  const v = $('#lm').value.trim();
+  const mins = /^\d+$/.test(v) ? parseInt(v, 10) : NaN;
+  if (!(mins >= 1 && mins <= 1440)) return setErr('Enter minutes between 1 and 1440');
+  const end = Date.now();
+  S.sessions.push({ id: uid(), act: id, start: end - mins * 60000, end });
+  save(); closeSheet();
+}
+
+function sheetEdit(id) {
+  const s = S.sessions.find(x => x.id === id); if (!s) return;
+  const opts = S.activities.filter(a => !a.archived || a.id === s.act)
+    .map(a => `<option value="${a.id}"${a.id === s.act ? ' selected' : ''}>${esc(a.name)}</option>`).join('');
+  openSheet(`<h2>Edit session</h2>
+  <label class="fld"><span>Activity</span><select id="ea">${opts}</select></label>
+  <label class="fld"><span>Started</span><input id="es" type="datetime-local" value="${toLocal(s.start)}"></label>
+  <label class="fld"><span>Ended</span><input id="ee" type="datetime-local" value="${toLocal(s.end)}"></label>
+  <div class="err" id="err"></div>
+  <div class="btns"><button class="btn danger" data-a="delsess" data-id="${id}">Delete</button><button class="btn pri" data-a="savesess" data-id="${id}">Save</button></div>`);
+}
+function saveSess(id) {
+  const s = S.sessions.find(x => x.id === id); if (!s) return;
+  // untouched fields keep their exact original timestamp (the picker only has minute precision)
+  const sv = $('#es').value, ev = $('#ee').value;
+  const st = sv === toLocal(s.start) ? s.start : fromLocal(sv);
+  const en = ev === toLocal(s.end) ? s.end : fromLocal(ev);
+  if (isNaN(st) || isNaN(en)) return setErr('Please set both times');
+  if (en <= st) return setErr('End must be after start');
+  if (en > Date.now() + 60000) return setErr('End can’t be in the future');
+  s.act = $('#ea').value; s.start = st; s.end = en;
+  save(); closeSheet();
+}
+
+function sheetStopAt() {
+  if (!S.running) return;
+  openSheet(`<h2>When did you finish?</h2><p class="sub">Started ${fmtDate(S.running.start)}, ${fmtTime(S.running.start)}</p>
+  <label class="fld"><span>Ended</span><input id="ee" type="datetime-local" value="${toLocal(Date.now())}"></label>
+  <div class="err" id="err"></div>
+  <div class="btns"><button class="btn pri" data-a="dostopat">Stop timer</button></div>`);
+}
+function doStopAt() {
+  const en = fromLocal($('#ee').value);
+  if (isNaN(en)) return setErr('Please set the end time');
+  if (en <= S.running.start) return setErr('End must be after the start');
+  if (en > Date.now() + 60000) return setErr('End can’t be in the future');
+  stopRunning(en); closeSheet();
+}
+
+function sheetActivity(id) {
+  const a = id ? act(id) : null;
+  pickedColor = a ? a.color : COLORS[live().length % COLORS.length];
+  openSheet(`<h2>${a ? 'Edit activity' : 'New activity'}</h2>
+  <label class="fld"><span>Name</span><input id="an" type="text" maxlength="30" value="${a ? esc(a.name) : ''}" placeholder="e.g. Reading" ${a ? '' : 'autofocus'}></label>
+  <div class="fld"><span>Colour</span><div class="sw" id="sw">${swatches()}</div></div>
+  <div class="err" id="err"></div>
+  <div class="btns">${a ? `<button class="btn danger" data-a="delact" data-id="${id}">Delete</button>` : ''}<button class="btn pri" data-a="saveact" data-id="${id || ''}">Save</button></div>`);
+}
+const swatches = () => COLORS.map(c => `<button style="--c:${c}" class="${c === pickedColor ? 'sel' : ''}" data-a="pick" data-c="${c}" aria-label="Colour ${c}"></button>`).join('');
+function saveActivity(id) {
+  const name = $('#an').value.trim();
+  if (!name) return setErr('Give it a name');
+  if (id) { const a = act(id); a.name = name; a.color = pickedColor; }
+  else S.activities.push({ id: uid(), name, color: pickedColor });
+  save();
+  if (fromSettings) { fromSettings = false; sheetSettings(); render(); } else closeSheet();
+}
+function delActivity(id) {
+  const a = act(id);
+  confirmSheet(`Delete “${esc(a.name)}”?`, 'It will disappear from your home screen. Past sessions stay in your history.', 'Delete', () => {
+    if (S.running && S.running.act === id) stopRunning();
+    const used = S.sessions.some(s => s.act === id);
+    if (used) a.archived = true; else S.activities = S.activities.filter(x => x.id !== id);
+    save();
+    if (fromSettings) { fromSettings = false; sheetSettings(); render(); } else closeSheet();
+  });
+}
+
+function sheetSettings() {
+  fromSettings = true;
+  const rows = live().map(a => `<button class="srow" data-a="editact" data-id="${a.id}"><span class="l"><i style="background:${a.color}"></i><span class="n">${esc(a.name)}</span></span><span class="tm">Edit</span></button>`).join('');
+  openSheet(`<h2>Settings</h2>
+  <div class="sec">Activities</div>${rows}
+  <div class="btns" style="margin-top:12px"><button class="btn" data-a="addact-s">+ Add activity</button></div>
+  <div class="sec">Backup</div>
+  <div class="btns"><button class="btn" data-a="exportjson">Export backup</button><button class="btn" data-a="exportcsv">Export CSV</button></div>
+  <div class="btns"><button class="btn" data-a="import">Restore from backup</button></div>
+  <div class="foot">Time Tracker ${VERSION} &middot; data is stored on this phone only</div>`);
+}
+
+function confirmSheet(title, msg, okLabel, cb) {
+  confirmCb = cb;
+  openSheet(`<h2>${title}</h2><p class="sub" style="display:block">${msg}</p>
+  <div class="btns"><button class="btn" data-a="close">Cancel</button><button class="btn pri" data-a="confirmok">${okLabel}</button></div>`);
+}
+
+/* ---------- export / import ---------- */
+async function exportFile(name, type, text) {
+  try {
+    const file = new File([text], name, { type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+const stamp = () => { const d = new Date(); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`; };
+function exportCSV() {
+  const q = s => `"${String(s).replace(/"/g, '""')}"`;
+  const f = ts => { const d = new Date(ts); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  const rows = S.sessions.slice().sort((a, b) => a.start - b.start)
+    .map(s => [q(act(s.act).name), f(s.start), f(s.end), Math.round((s.end - s.start) / 60000)].join(','));
+  return ['Activity,Start,End,Minutes'].concat(rows).join('\n');
+}
+$('#importFile').addEventListener('change', e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const j = JSON.parse(r.result);
+      if (!j || !Array.isArray(j.activities) || !Array.isArray(j.sessions)) throw 0;
+      confirmSheet('Restore backup?', `This replaces everything on this phone with the backup (${j.sessions.length} sessions).`, 'Restore', () => {
+        S = { activities: j.activities, sessions: j.sessions, running: j.running || null };
+        save(); fromSettings = false; closeSheet();
+      });
+    } catch (err) { openSheet('<h2>Couldn’t read that file</h2><p class="sub" style="display:block">Choose a backup file exported from this app.</p>'); }
+  };
+  r.readAsText(file);
+});
+
+/* ---------- events ---------- */
+const ACT = {
+  tab(t) { tab = t.dataset.tab; if (tab === 'today') curDay = Date.now(); if (tab === 'week') curWeek = Date.now(); render(); window.scrollTo(0, 0); },
+  tile(t) { if (S.running && S.running.act === t.dataset.id) stopRunning(); else startAct(t.dataset.id); render(); },
+  stop() { stopRunning(); render(); },
+  stopat() { sheetStopAt(); },
+  dostopat() { doStopAt(); },
+  log(t) { sheetLog(t.dataset.id); },
+  dolog(t) { doLog(t.dataset.id); },
+  close() { fromSettings = false; confirmCb = null; closeSheet(); },
+  settings() { sheetSettings(); },
+  edit(t) { sheetEdit(t.dataset.id); },
+  savesess(t) { saveSess(t.dataset.id); },
+  delsess(t) {
+    const id = t.dataset.id;
+    confirmSheet('Delete this session?', 'This can’t be undone.', 'Delete', () => { S.sessions = S.sessions.filter(s => s.id !== id); save(); closeSheet(); });
+  },
+  prevday() { curDay = addDays(sod(curDay), -1); render(); },
+  nextday() { curDay = addDays(sod(curDay), 1); render(); },
+  prevweek() { curWeek = addDays(weekStart(curWeek), -7); render(); },
+  nextweek() { curWeek = addDays(weekStart(curWeek), 7); render(); },
+  goday(t) { curDay = +t.dataset.ts; tab = 'today'; render(); window.scrollTo(0, 0); },
+  addact() { fromSettings = false; sheetActivity(null); },
+  'addact-s'() { sheetActivity(null); },
+  editact(t) { sheetActivity(t.dataset.id); },
+  saveact(t) { saveActivity(t.dataset.id); },
+  delact(t) { delActivity(t.dataset.id); },
+  pick(t) { pickedColor = t.dataset.c; $('#sw').innerHTML = swatches(); },
+  exportjson() { exportFile(`time-tracker-backup-${stamp()}.json`, 'application/json', JSON.stringify(S, null, 2)); },
+  exportcsv() { exportFile(`time-tracker-${stamp()}.csv`, 'text/csv', exportCSV()); },
+  import() { $('#importFile').click(); },
+  confirmok() { const cb = confirmCb; confirmCb = null; if (cb) cb(); }
+};
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-a]'); if (!t) return;
+  const fn = ACT[t.dataset.a]; if (fn) fn(t);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id === 'lm') { const b = $('[data-a="dolog"]'); if (b) b.click(); }
+  if (e.key === 'Enter' && e.target.id === 'an') { const b = $('[data-a="saveact"]'); if (b) b.click(); }
+});
+
+/* ---------- live tick ---------- */
+let n = 0;
+setInterval(() => {
+  const c = $('#clock');
+  if (c && S.running) c.textContent = fmtClock(Date.now() - S.running.start);
+  if (++n % 20 === 0 && $('#sheet').hidden) render();
+}, 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && $('#sheet').hidden) render(); });
+
+render();
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>
+</body>
+</html>
