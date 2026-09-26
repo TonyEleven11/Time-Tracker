@@ -1,5 +1,5 @@
 // Network-first so a new deploy is always picked up; cache is only the offline fallback.
-const CACHE = 'time-tracker-v1';
+const CACHE = 'time-tracker-v2';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

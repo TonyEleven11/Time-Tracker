@@ -43,9 +43,9 @@ button{font-family:inherit}
 .gear svg{width:24px;height:24px}
 
 /* running card */
-.now{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--c);color:#fff;border-radius:24px;padding:16px 18px;margin-bottom:14px}
+.now{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--c);color:var(--t,#fff);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);border-radius:24px;padding:16px 18px;margin-bottom:14px}
 .now-l{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;display:flex;align-items:center;gap:7px}
-.now-l i{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s ease-in-out infinite}
+.now-l i{width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.4s ease-in-out infinite}
 .now-n{font-size:22px;font-weight:800;margin-top:2px;line-height:1.15}
 .clock{font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:2px}
 .stop{all:unset;cursor:pointer;flex:none;width:86px;height:86px;border-radius:50%;background:#fff;color:#1d1c1a;font-weight:800;font-size:16px;display:grid;place-items:center;text-align:center}
@@ -63,15 +63,15 @@ button{font-family:inherit}
 
 /* tiles */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.tile{position:relative;background:var(--c);border-radius:22px;color:#fff;min-height:112px}
-.tile.on{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--c)}
+.tile{position:relative;background:var(--c);border-radius:22px;color:var(--t,#fff);min-height:112px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.tile.on{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--c);outline:2px solid color-mix(in srgb,var(--t) 60%,transparent);outline-offset:-7px}
 .tile-main{all:unset;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;width:100%;height:100%;min-height:112px;padding:14px;cursor:pointer;border-radius:22px}
 .tile-main:active{transform:scale(.97);transition:transform .08s}
 .tn{font-weight:750;font-size:18px;line-height:1.15;overflow-wrap:break-word}
 .tt{font-size:13px;opacity:.9;display:flex;align-items:center;gap:6px;min-height:30px;padding-right:56px}
-.tt i{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s ease-in-out infinite;flex:none}
-.tile-log{position:absolute;right:10px;bottom:10px;z-index:2;border:0;border-radius:999px;background:rgba(255,255,255,.24);color:#fff;font-weight:700;font-size:13px;padding:7px 11px;min-height:32px;cursor:pointer}
-.tile-log:active{background:rgba(255,255,255,.4)}
+.tt i{width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.4s ease-in-out infinite;flex:none}
+.tile-log{position:absolute;right:10px;bottom:10px;z-index:2;border:0;border-radius:999px;background:color-mix(in srgb,var(--t) 24%,transparent);color:var(--t);font-weight:700;font-size:13px;padding:7px 11px;min-height:32px;cursor:pointer}
+.tile-log:active{background:color-mix(in srgb,var(--t) 42%,transparent)}
 .tile.add{background:transparent;border:2px dashed var(--line);color:var(--mute)}
 .tile.add .tile-main{align-items:center;justify-content:center;font-weight:700}
 @keyframes pulse{50%{opacity:.25}}
@@ -141,7 +141,7 @@ button{font-family:inherit}
 .btn.danger{color:var(--danger)}
 .btn:active{opacity:.75}
 .sw{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 10px}
-.sw button{all:unset;cursor:pointer;width:38px;height:38px;border-radius:50%;background:var(--c);display:grid;place-items:center;color:#fff;font-weight:800}
+.sw button{all:unset;cursor:pointer;width:38px;height:38px;border-radius:50%;background:var(--c);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
 .sw button.sel{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--c)}
 .sec{margin:18px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
 .foot{color:var(--mute);font-size:12px;margin-top:16px;text-align:center}
@@ -165,9 +165,19 @@ button{font-family:inherit}
 <script>
 (() => {
 'use strict';
-const VERSION = 'v1';
+const VERSION = 'v2';
 const KEY = 'timetracker.v1';
-const COLORS = ['#c4551f','#3f5fe0','#2f7d3e','#c13567','#7a4bc4','#23786e','#9a6b00','#566579'];
+const COLORS = [
+  '#c4551f','#3f5fe0','#2f7d3e','#c13567','#7a4bc4','#23786e','#9a6b00','#566579',   // originals
+  '#17171a','#87ceeb','#f0b429','#7a4a2b','#d32f2f','#1e3a8a','#9ccc3c','#7fdcb9','#c3a6f0','#9aa1ad' // black, sky blue, gold, brown, red, navy, lime, mint, lilac, silver
+];
+// pick white or dark text, whichever reads better on the colour
+function inkFor(hex) {
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  const L = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  return L > 0.205 ? '#1d1c1a' : '#ffffff';
+}
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -264,7 +274,7 @@ function viewTrack() {
   let top = '';
   if (S.running) {
     const a = act(S.running.act);
-    top = `<div class="now" style="--c:${a.color}"><div><div class="now-l"><i></i>Now tracking</div><div class="now-n">${esc(a.name)}</div><div class="clock" id="clock">${fmtClock(now - S.running.start)}</div></div><button class="stop" data-a="stop" aria-label="Stop"><span><b></b>Stop</span></button></div>`;
+    top = `<div class="now" style="--c:${a.color};--t:${inkFor(a.color)}"><div><div class="now-l"><i></i>Now tracking</div><div class="now-n">${esc(a.name)}</div><div class="clock" id="clock">${fmtClock(now - S.running.start)}</div></div><button class="stop" data-a="stop" aria-label="Stop"><span><b></b>Stop</span></button></div>`;
     if (now - S.running.start > 3 * 3600000) {
       top += `<div class="stale"><span>Started ${fmtTime(S.running.start)} &mdash; forgot to stop?</span><button data-a="stopat">Set end time</button></div>`;
     }
@@ -276,7 +286,7 @@ function viewTrack() {
     const run = S.running && S.running.act === a.id;
     const td = tod[a.id] || 0;
     const sub = run ? `<i></i>Running` : (td ? `${fmtDur(td)} today` : 'Tap to start');
-    return `<div class="tile${run ? ' on' : ''}" style="--c:${a.color}"><button class="tile-main" data-a="tile" data-id="${a.id}"><span class="tn">${esc(a.name).replace(/\//g, '/<wbr>')}</span><span class="tt">${sub}</span></button><button class="tile-log" data-a="log" data-id="${a.id}" aria-label="Log time for ${esc(a.name)}">+ log</button></div>`;
+    return `<div class="tile${run ? ' on' : ''}" style="--c:${a.color};--t:${inkFor(a.color)}"><button class="tile-main" data-a="tile" data-id="${a.id}"><span class="tn">${esc(a.name).replace(/\//g, '/<wbr>')}</span><span class="tt">${sub}</span></button><button class="tile-log" data-a="log" data-id="${a.id}" aria-label="Log time for ${esc(a.name)}">+ log</button></div>`;
   }).join('');
   const add = `<div class="tile add"><button class="tile-main" data-a="addact">+ Add activity</button></div>`;
   return head('Track') + top + `<div class="grid">${tiles}${add}</div>`;
